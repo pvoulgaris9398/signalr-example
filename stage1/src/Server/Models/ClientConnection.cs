@@ -1,7 +1,5 @@
 using System.Net.WebSockets;
 
-namespace Server.Models;
-
 public sealed class ClientConnection
 {
     public Guid Id { get; } = Guid.NewGuid();
@@ -13,4 +11,6 @@ public sealed class ClientConnection
     public DateTime LastSeenUtc { get; set; } = DateTime.UtcNow;
 
     public long LastAcknowledgedSequence { get; set; }
+
+    public string RemoteAddress { get; init; } = "";
 }

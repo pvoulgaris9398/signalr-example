@@ -19,15 +19,15 @@ public sealed class BroadcastService
         CancellationToken cancellationToken = default
     )
     {
-        var json = JsonSerializer.Serialize(
-            new
-            {
-                type = "event",
-                sequence = record.Sequence,
-                timestamp = record.Timestamp,
-                message = record.Message,
-            }
-        );
+        var payload = new EventMessage
+        {
+            Type = "event",
+            Sequence = record.Sequence,
+            Timestamp = record.Timestamp,
+            Message = record.Message,
+        };
+
+        var json = JsonSerializer.Serialize(payload);
 
         var bytes = Encoding.UTF8.GetBytes(json);
 

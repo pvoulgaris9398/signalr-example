@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using Server.Models;
 using Server.Services;
+using Server.WebSockets;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,12 @@ builder.Services.AddSingleton<EventStore>();
 builder.Services.AddSingleton<ConnectionManager>();
 
 builder.Services.AddSingleton<BroadcastService>();
+
+builder.Services.AddHostedService<HeartbeatService>();
+
+builder.Services.AddSingleton<MessageProcessor>();
+
+builder.Services.AddSingleton<WebSocketEndpoint>();
 
 var app = builder.Build();
 
@@ -40,45 +47,9 @@ app.Map(
     "/ws",
     async context =>
     {
-        if (!context.WebSockets.IsWebSocketRequest)
-        {
-            context.Response.StatusCode = 400;
-            return;
-        }
+        var endpoint = context.RequestServices.GetRequiredService<WebSocketEndpoint>();
 
-        var manager = context.RequestServices.GetRequiredService<ConnectionManager>();
-
-        using var socket = await context.WebSockets.AcceptWebSocketAsync();
-
-        var connection = new ClientConnection { Socket = socket };
-
-        manager.Add(connection);
-
-        Console.WriteLine($"Client connected ({manager.Count} total)");
-
-        var buffer = new byte[4096];
-
-        while (socket.State == WebSocketState.Open)
-        {
-            var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
-
-            if (result.MessageType == WebSocketMessageType.Close)
-            {
-                break;
-            }
-
-            connection.LastSeenUtc = DateTime.UtcNow;
-        }
-
-        manager.Remove(connection.Id);
-
-        Console.WriteLine($"Client disconnected ({manager.Count} total)");
-
-        await socket.CloseAsync(
-            WebSocketCloseStatus.NormalClosure,
-            "Closed",
-            CancellationToken.None
-        );
+        await endpoint.HandleAsync(context);
     }
 );
 
