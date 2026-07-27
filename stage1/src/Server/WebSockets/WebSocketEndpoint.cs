@@ -10,108 +10,61 @@ public sealed class WebSocketEndpoint
     private readonly ConnectionManager _connections;
     private readonly MessageProcessor _processor;
 
-
-    public WebSocketEndpoint(
-        ConnectionManager connections,
-        MessageProcessor processor)
+    public WebSocketEndpoint(ConnectionManager connections, MessageProcessor processor)
     {
         _connections = connections;
         _processor = processor;
     }
 
-
-
-    public async Task HandleAsync(
-        HttpContext context)
+    public async Task HandleAsync(HttpContext context)
     {
-        if(!context.WebSockets.IsWebSocketRequest)
+        if (!context.WebSockets.IsWebSocketRequest)
         {
             context.Response.StatusCode = 400;
             return;
         }
 
+        var socket = await context.WebSockets.AcceptWebSocketAsync();
 
-        var socket =
-            await context.WebSockets
-                .AcceptWebSocketAsync();
-
-
-
-        var connection =
-            new ClientConnection
-            {
-                Socket = socket
-            };
-
+        var connection = new ClientConnection { Socket = socket };
 
         _connections.Add(connection);
 
+        Console.WriteLine($"Connected {connection.Id}");
 
-        Console.WriteLine(
-            $"Connected {connection.Id}");
-
-
-
-        var buffer =
-            new byte[8192];
-
+        var buffer = new byte[8192];
 
         try
         {
-            while(socket.State ==
-                  WebSocketState.Open)
+            while (socket.State == WebSocketState.Open)
             {
+                var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
 
-                var result =
-                    await socket.ReceiveAsync(
-                        buffer,
-                        CancellationToken.None);
-
-
-
-                if(result.MessageType ==
-                   WebSocketMessageType.Close)
+                if (result.MessageType == WebSocketMessageType.Close)
                 {
                     break;
                 }
 
+                var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                var json =
-                    Encoding.UTF8.GetString(
-                        buffer,
-                        0,
-                        result.Count);
+                connection.LastSeenUtc = DateTime.UtcNow;
 
-
-
-                connection.LastSeenUtc =
-                    DateTime.UtcNow;
-
-
-
-                await _processor.ProcessAsync(
-                    connection,
-                    json,
-                    CancellationToken.None);
+                await _processor.ProcessAsync(connection, json, CancellationToken.None);
             }
         }
         finally
         {
-            _connections.Remove(
-                connection.Id);
+            _connections.Remove(connection.Id);
 
+            Console.WriteLine($"Disconnected {connection.Id}");
 
-            Console.WriteLine(
-                $"Disconnected {connection.Id");
-
-
-            if(socket.State ==
-               WebSocketState.Open)
+            if (socket.State == WebSocketState.Open)
             {
                 await socket.CloseAsync(
                     WebSocketCloseStatus.NormalClosure,
                     "Closing",
-                    CancellationToken.None);
+                    CancellationToken.None
+                );
             }
         }
     }

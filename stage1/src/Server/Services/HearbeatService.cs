@@ -1,5 +1,7 @@
 using System.Net.WebSockets;
 
+namespace Server.Services;
+
 public sealed class HeartbeatService : BackgroundService
 {
     private readonly ConnectionManager _manager;
