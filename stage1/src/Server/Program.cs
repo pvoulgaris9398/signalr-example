@@ -1,8 +1,16 @@
 using System.Net.WebSockets;
+using Server.Models;
+using Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddSingleton<EventStore>();
+
+builder.Services.AddSingleton<ConnectionManager>();
+
+builder.Services.AddSingleton<BroadcastService>();
 
 var app = builder.Build();
 
@@ -38,9 +46,15 @@ app.Map(
             return;
         }
 
-        using WebSocket socket = await context.WebSockets.AcceptWebSocketAsync();
+        var manager = context.RequestServices.GetRequiredService<ConnectionManager>();
 
-        Console.WriteLine("Socket Connected");
+        using var socket = await context.WebSockets.AcceptWebSocketAsync();
+
+        var connection = new ClientConnection { Socket = socket };
+
+        manager.Add(connection);
+
+        Console.WriteLine($"Client connected ({manager.Count} total)");
 
         var buffer = new byte[4096];
 
@@ -50,25 +64,21 @@ app.Map(
 
             if (result.MessageType == WebSocketMessageType.Close)
             {
-                Console.WriteLine("Socket Closed");
-
-                await socket.CloseAsync(
-                    WebSocketCloseStatus.NormalClosure,
-                    "Closed",
-                    CancellationToken.None
-                );
-
                 break;
             }
 
-            var message = System.Text.Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-            Console.WriteLine($"Received: {message}");
-
-            var bytes = System.Text.Encoding.UTF8.GetBytes($"Echo: {message}");
-
-            await socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+            connection.LastSeenUtc = DateTime.UtcNow;
         }
+
+        manager.Remove(connection.Id);
+
+        Console.WriteLine($"Client disconnected ({manager.Count} total)");
+
+        await socket.CloseAsync(
+            WebSocketCloseStatus.NormalClosure,
+            "Closed",
+            CancellationToken.None
+        );
     }
 );
 
