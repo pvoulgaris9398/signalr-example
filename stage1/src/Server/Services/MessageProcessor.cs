@@ -34,16 +34,6 @@ public sealed class MessageProcessor
 
                     break;
 
-                case "ping":
-
-                    await SendAsync(
-                        connection,
-                        new PongMessage { Type = "pong" },
-                        cancellationToken
-                    );
-
-                    break;
-
                 case "replay":
 
                     await HandleReplay(connection, document, cancellationToken);
@@ -51,10 +41,7 @@ public sealed class MessageProcessor
                     break;
 
                 default:
-
-                    Console.WriteLine($"Unknown message type {type}");
-
-                    break;
+                    throw new InvalidOperationException($"Unexpected message '{type}'");
             }
         }
         catch (JsonException)

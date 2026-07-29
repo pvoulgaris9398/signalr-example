@@ -17,6 +17,7 @@ builder.Services.AddHostedService<HeartbeatService>();
 
 builder.Services.AddSingleton<MessageProcessor>();
 
+builder.Services.AddSingleton<IMessageHandler, PingHandler>();
 builder.Services.AddSingleton<IMessageHandler, MessageProcessorHandler>();
 
 builder.Services.AddSingleton<SocketDispatcher>();

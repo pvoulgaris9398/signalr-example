@@ -20,11 +20,14 @@ wscat -c ws://localhost:5000/ws
   (assuming we are listening with `wscat`)
 
 ```json
+
 {"type":"ping"}
 
 {"type": "ack", "sequence": 0}
 
 {"type": "replay", "lastSequence": 0}
+
+{"type": "replay", "lastSequence": 2}
 
 ```
 

@@ -1,22 +1,39 @@
-using Server.Models;
+using System.Text.Json;
 
 namespace Server.Services;
 
 public sealed class SocketDispatcher
 {
-    private readonly IMessageHandler _handler;
+    private readonly Dictionary<string, IMessageHandler> _handlers;
 
-    public SocketDispatcher(IMessageHandler handler)
+    private readonly IMessageHandler _fallback;
+
+    public SocketDispatcher(IEnumerable<IMessageHandler> handlers)
     {
-        _handler = handler;
+        _handlers = handlers
+            .Where(h => h.MessageType != "*")
+            .ToDictionary(h => h.MessageType, StringComparer.OrdinalIgnoreCase);
+
+        _fallback = handlers.Single(h => h.MessageType == "*");
     }
 
-    public Task DispatchAsync(
+    public async Task DispatchAsync(
         ClientConnection connection,
         string json,
         CancellationToken cancellationToken
     )
     {
-        return _handler.HandleAsync(connection, json, cancellationToken);
+        using var document = JsonDocument.Parse(json);
+
+        var type = document.RootElement.GetProperty("type").GetString() ?? "";
+
+        if (_handlers.TryGetValue(type, out var handler))
+        {
+            await handler.HandleAsync(connection, json, cancellationToken);
+
+            return;
+        }
+
+        await _fallback.HandleAsync(connection, json, cancellationToken);
     }
 }
