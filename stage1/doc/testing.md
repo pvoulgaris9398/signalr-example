@@ -8,8 +8,24 @@ npm install -g wscat
 wscat -c wss://websocket-echo.com
 ```
 
+- So, this is the `signalr` endpoint and `wscat` will open a connection to it
+
 ```bash
 wscat -c ws://localhost:5000/ws
+```
+
+- If we post these messages to the `ws` endpoint, we may get a response
+- Also, posting `http://localhost:5000/api/events` below will also cause \
+  us to get a notification via `signalr` on the `ws` endpoint \
+  (assuming we are listening with `wscat`)
+
+```json
+{"type":"ping"}
+
+{"type": "ack", "sequence": 0}
+
+{"type": "replay", "lastSequence": 0}
+
 ```
 
 ```bash
@@ -23,32 +39,26 @@ http://localhost:5000/api/events \
 ## EventStore Implementation & Trade-Offs
 
 - **In-memory vs. Durable Storage**
-
   - **In-memory** (`ConcurrentQueue`, `List`) is extremely fast with low latency, but all events are lost if the process restarts.
   - **Durable storage** (PostgreSQL, EventStoreDB, Kafka) provides persistence, replay, and recovery, but introduces network and disk I/O latency.
 
 - **Write Throughput vs. Read Efficiency**
-
   - An append-only queue provides **O(1)** writes and excellent throughput.
   - Replaying events by scanning the queue becomes **O(n)** as the event history grows, making long-running systems less efficient.
 
 - **Memory Usage vs. Replay Window**
-
   - Keeping every event in memory allows unlimited replay but causes memory growth over time.
   - A ring buffer or fixed-size cache keeps memory bounded but limits how far back clients can replay events.
 
 - **Concurrency vs. Simplicity**
-
   - Lock-free approaches (`ConcurrentQueue`, `Interlocked`) provide excellent scalability and avoid thread contention.
   - Simpler collections (`List<T>`) require explicit synchronization (`lock` or `ReaderWriterLockSlim`) but can offer better read performance and cache locality.
 
 - **Ordering Guarantees vs. Scalability**
-
   - A single atomic sequence generator (`Interlocked.Increment`) guarantees a globally ordered event stream and simplifies replay.
   - In distributed or partitioned systems, maintaining global ordering becomes more difficult and often requires partitioning or accepting only per-partition ordering.
 
 - **Replay Performance vs. Storage Complexity**
-
   - A simple append-only collection is easy to implement but requires scanning to find missed events.
   - Indexed databases or event stores can efficiently retrieve "events since sequence N" but add operational complexity.
 

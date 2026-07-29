@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text;
-using Server.Models;
 using Server.Services;
 
 namespace Server.WebSockets;

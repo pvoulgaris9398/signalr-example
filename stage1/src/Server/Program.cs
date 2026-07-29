@@ -25,8 +25,6 @@ app.UseRouting();
 
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
-app.MapControllers();
-
 app.MapGet(
     "/",
     () =>
@@ -52,5 +50,7 @@ app.Map(
         await endpoint.HandleAsync(context);
     }
 );
+
+app.MapControllers();
 
 app.Run();

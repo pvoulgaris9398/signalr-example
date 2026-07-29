@@ -20,35 +20,52 @@ public sealed class MessageProcessor
         CancellationToken cancellationToken
     )
     {
-        using var document = JsonDocument.Parse(json);
-
-        var type = document.RootElement.GetProperty("type").GetString();
-
-        switch (type)
+        try
         {
-            case "ack":
+            using var document = JsonDocument.Parse(json);
 
-                await HandleAck(connection, document);
+            var type = document.RootElement.GetProperty("type").GetString();
 
-                break;
+            switch (type)
+            {
+                case "ack":
 
-            case "ping":
+                    await HandleAck(connection, document);
 
-                await SendAsync(connection, new PongMessage { Type = "pong" }, cancellationToken);
+                    break;
 
-                break;
+                case "ping":
 
-            case "replay":
+                    await SendAsync(
+                        connection,
+                        new PongMessage { Type = "pong" },
+                        cancellationToken
+                    );
 
-                await HandleReplay(connection, document, cancellationToken);
+                    break;
 
-                break;
+                case "replay":
 
-            default:
+                    await HandleReplay(connection, document, cancellationToken);
 
-                Console.WriteLine($"Unknown message type {type}");
+                    break;
 
-                break;
+                default:
+
+                    Console.WriteLine($"Unknown message type {type}");
+
+                    break;
+            }
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine($"\x1B[31mInvalid JSON from {connection.Id}: {json}\x1B[0m");
+            //Console.WriteLine(ex);
+            // Option 1: ignore it
+
+            // Option 2: send an error message
+
+            // Option 3: disconnect the client
         }
     }
 
