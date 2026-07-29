@@ -1,28 +1,29 @@
+using System.Net.WebSockets;
 using System.Text.Json;
 using Server.Models;
 using Server.Services;
 
 namespace Server.Handlers;
 
-public sealed class PingHandler : IMessageHandler
+public sealed class PingHandler : MessageHandler<PingMessage>
 {
-    public string MessageType => "ping";
+    public override string MessageType => "ping";
 
-    public async Task HandleAsync(
+    protected override async Task HandleAsync(
         ClientConnection connection,
-        string json,
+        PingMessage message,
         CancellationToken cancellationToken
     )
     {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(new PongMessage { Type = "pong" });
+
         await connection.Socket.SendAsync(
-            JsonSerializer.SerializeToUtf8Bytes(new PongMessage { Type = "pong" }),
-            System.Net.WebSockets.WebSocketMessageType.Text,
+            bytes,
+            WebSocketMessageType.Text,
             true,
             cancellationToken
         );
 
         connection.LastSeenUtc = DateTime.UtcNow;
-
-        Console.WriteLine($"Ping from {connection.Id}");
     }
 }

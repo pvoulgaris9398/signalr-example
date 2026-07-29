@@ -15,10 +15,11 @@ builder.Services.AddSingleton<BroadcastService>();
 
 builder.Services.AddHostedService<HeartbeatService>();
 
-builder.Services.AddSingleton<MessageProcessor>();
-
 builder.Services.AddSingleton<IMessageHandler, PingHandler>();
-builder.Services.AddSingleton<IMessageHandler, MessageProcessorHandler>();
+
+builder.Services.AddSingleton<IMessageHandler, AckHandler>();
+
+builder.Services.AddSingleton<IMessageHandler, ReplayHandler>();
 
 builder.Services.AddSingleton<SocketDispatcher>();
 

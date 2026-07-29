@@ -6,5 +6,11 @@ public interface IMessageHandler
 {
     string MessageType { get; }
 
-    Task HandleAsync(ClientConnection connection, string json, CancellationToken cancellationToken);
+    Type MessageClrType { get; }
+
+    Task HandleAsync(
+        ClientConnection connection,
+        SocketMessage message,
+        CancellationToken cancellationToken
+    );
 }

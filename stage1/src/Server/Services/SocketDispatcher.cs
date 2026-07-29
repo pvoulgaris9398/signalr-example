@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Server.Models;
 
 namespace Server.Services;
 
@@ -6,15 +7,9 @@ public sealed class SocketDispatcher
 {
     private readonly Dictionary<string, IMessageHandler> _handlers;
 
-    private readonly IMessageHandler _fallback;
-
     public SocketDispatcher(IEnumerable<IMessageHandler> handlers)
     {
-        _handlers = handlers
-            .Where(h => h.MessageType != "*")
-            .ToDictionary(h => h.MessageType, StringComparer.OrdinalIgnoreCase);
-
-        _fallback = handlers.Single(h => h.MessageType == "*");
+        _handlers = handlers.ToDictionary(h => h.MessageType, StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task DispatchAsync(
@@ -23,17 +18,40 @@ public sealed class SocketDispatcher
         CancellationToken cancellationToken
     )
     {
-        using var document = JsonDocument.Parse(json);
+        MessageEnvelope? envelope;
 
-        var type = document.RootElement.GetProperty("type").GetString() ?? "";
-
-        if (_handlers.TryGetValue(type, out var handler))
+        try
         {
-            await handler.HandleAsync(connection, json, cancellationToken);
+            envelope = JsonSerializer.Deserialize<MessageEnvelope>(json);
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine($"Invalid JSON: {json}");
+            return;
+        }
+
+        if (envelope is null || string.IsNullOrWhiteSpace(envelope.Type))
+        {
+            Console.WriteLine("Missing message type.");
+            return;
+        }
+
+        if (!_handlers.TryGetValue(envelope.Type, out var handler))
+        {
+            Console.WriteLine($"Unknown message type '{envelope.Type}'.");
 
             return;
         }
 
-        await _fallback.HandleAsync(connection, json, cancellationToken);
+        var message = (SocketMessage?)JsonSerializer.Deserialize(json, handler.MessageClrType);
+
+        if (message is null)
+        {
+            Console.WriteLine($"Unable to deserialize '{envelope.Type}'.");
+
+            return;
+        }
+
+        await handler.HandleAsync(connection, message, cancellationToken);
     }
 }
