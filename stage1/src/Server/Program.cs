@@ -1,5 +1,5 @@
 using System.Net.WebSockets;
-using Server.Models;
+using Server.Handlers;
 using Server.Services;
 using Server.WebSockets;
 
@@ -16,6 +16,10 @@ builder.Services.AddSingleton<BroadcastService>();
 builder.Services.AddHostedService<HeartbeatService>();
 
 builder.Services.AddSingleton<MessageProcessor>();
+
+builder.Services.AddSingleton<IMessageHandler, MessageProcessorHandler>();
+
+builder.Services.AddSingleton<SocketDispatcher>();
 
 builder.Services.AddSingleton<WebSocketEndpoint>();
 

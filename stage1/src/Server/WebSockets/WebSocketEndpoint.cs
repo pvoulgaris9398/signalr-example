@@ -6,13 +6,14 @@ namespace Server.WebSockets;
 
 public sealed class WebSocketEndpoint
 {
-    private readonly ConnectionManager _connections;
-    private readonly MessageProcessor _processor;
+    private readonly ConnectionManager _manager;
 
-    public WebSocketEndpoint(ConnectionManager connections, MessageProcessor processor)
+    private readonly SocketDispatcher _dispatcher;
+
+    public WebSocketEndpoint(ConnectionManager manager, SocketDispatcher dispatcher)
     {
-        _connections = connections;
-        _processor = processor;
+        _manager = manager;
+        _dispatcher = dispatcher;
     }
 
     public async Task HandleAsync(HttpContext context)
@@ -27,7 +28,7 @@ public sealed class WebSocketEndpoint
 
         var connection = new ClientConnection { Socket = socket };
 
-        _connections.Add(connection);
+        _manager.Add(connection);
 
         Console.WriteLine($"Connected {connection.Id}");
 
@@ -48,12 +49,12 @@ public sealed class WebSocketEndpoint
 
                 connection.LastSeenUtc = DateTime.UtcNow;
 
-                await _processor.ProcessAsync(connection, json, CancellationToken.None);
+                await _dispatcher.DispatchAsync(connection, json, CancellationToken.None);
             }
         }
         finally
         {
-            _connections.Remove(connection.Id);
+            _manager.Remove(connection.Id);
 
             Console.WriteLine($"Disconnected {connection.Id}");
 
