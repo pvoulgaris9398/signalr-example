@@ -1,5 +1,3 @@
-using System.Net.WebSockets;
-using System.Text.Json;
 using Server.Models;
 using Server.Services;
 
@@ -15,15 +13,12 @@ public sealed class PingHandler : MessageHandler<PingMessage>
         CancellationToken cancellationToken
     )
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(new PongMessage { Type = "pong" });
+        var pong = new PongMessage { Type = "pong" };
 
-        await connection.Socket.SendAsync(
-            bytes,
-            WebSocketMessageType.Text,
-            true,
-            cancellationToken
-        );
+        await connection.Outbound.Writer.WriteAsync(pong, cancellationToken);
 
         connection.LastSeenUtc = DateTime.UtcNow;
+
+        Console.WriteLine($"Queued pong response for {connection.Id}");
     }
 }

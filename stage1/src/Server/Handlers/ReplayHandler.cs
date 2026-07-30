@@ -1,6 +1,3 @@
-using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
 using Server.Models;
 using Server.Services;
 
@@ -27,7 +24,7 @@ public sealed class ReplayHandler : MessageHandler<ReplayRequest>
 
         foreach (var e in events)
         {
-            var payload = new EventMessage
+            var eventMessage = new EventMessage
             {
                 Type = "event",
                 Sequence = e.Sequence,
@@ -35,16 +32,9 @@ public sealed class ReplayHandler : MessageHandler<ReplayRequest>
                 Message = e.Message,
             };
 
-            var json = JsonSerializer.Serialize(payload);
-
-            var bytes = Encoding.UTF8.GetBytes(json);
-
-            await connection.Socket.SendAsync(
-                bytes,
-                WebSocketMessageType.Text,
-                true,
-                cancellationToken
-            );
+            await connection.Outbound.Writer.WriteAsync(eventMessage, cancellationToken);
         }
+
+        Console.WriteLine($"Queued {events.Count()} replay events for {connection.Id}");
     }
 }
