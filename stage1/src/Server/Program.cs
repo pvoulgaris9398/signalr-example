@@ -25,6 +25,8 @@ builder.Services.AddSingleton<SocketDispatcher>();
 
 builder.Services.AddSingleton<WebSocketEndpoint>();
 
+builder.Services.AddSingleton<ConnectionSender>();
+
 var app = builder.Build();
 
 app.UseRouting();

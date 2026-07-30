@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Server.Models;
+using Server.Serialization;
 
 namespace Server.Services;
 
@@ -22,7 +23,21 @@ public sealed class SocketDispatcher
 
         try
         {
-            envelope = JsonSerializer.Deserialize<MessageEnvelope>(json);
+            using var doc = JsonDocument.Parse(json);
+
+            /*
+            Console.WriteLine("Incoming JSON:");
+            Console.WriteLine(doc.RootElement);
+
+            foreach (var property in doc.RootElement.EnumerateObject())
+            {
+                Console.WriteLine($"Property: '{property.Name}' = {property.Value}");
+            }
+            */
+
+            envelope = JsonSerializer.Deserialize<MessageEnvelope>(json, JsonOptions.Default);
+
+            // Console.WriteLine($"Envelope.Type = '{envelope?.Type}'");
         }
         catch (JsonException)
         {
@@ -43,8 +58,8 @@ public sealed class SocketDispatcher
             return;
         }
 
-        var message = (SocketMessage?)JsonSerializer.Deserialize(json, handler.MessageClrType);
-
+        var message = (SocketMessage?)
+            JsonSerializer.Deserialize(json, handler.MessageClrType, JsonOptions.Default);
         if (message is null)
         {
             Console.WriteLine($"Unable to deserialize '{envelope.Type}'.");

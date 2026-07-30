@@ -29,6 +29,8 @@ wscat -c ws://localhost:5000/ws
 
 {"type": "replay", "lastSequence": 2}
 
+{"type": "blah"}
+
 ```
 
 ```bash
